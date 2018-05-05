@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <div id="app"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.0.0-beta.3/babel.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/16.2.0/umd/react.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/16.2.0/umd/react-dom.development.js"></script>
+
+    <script type="text/babel">
+        const isFunction = x => typeof x === 'function';
+
+        class Window extends React.Component {
+            window = null;
+        
+            componentDidMount() {
+                if(this.window) return this.window.open();
+
+                const {
+                    url,
+                    name,
+                    menubar,
+                    location,
+                    toolbar,
+                    width,
+                    height,
+                    resizeble,
+                } = this.props;
+
+                const features = Object.entries({
+                    menubar,
+                    location,
+                    toolbar,
+                    width,
+                    height,
+                    resizeble,
+                }).map(([key, value]) => `${key}=${value}`).join();
+
+                const w = window.open(url, name, features);
+                const childWindowAppRoot = w.document.createElement('div');
+                w.render = (children) => {
+                    // if you are simply creating a new view
+                    // with light functionality, then you can
+                    // pass the children down and the child window
+                    // can be a mini react app that can render
+                    // itself and maintain it's own state
+                    ReactDOM.render(children, childWindowAppRoot);
+                }
+                w.addEventListener('load', () => {
+                    w.document.body.appendChild(childWindowAppRoot);
+                    this.internalForceUpdate(); 
+                }, { once: true });
+                w.addEventListener('beforeunload', this.close, { once: true });
+                this.window = w;
+            }
+            
+            componentWillUnmount() {
+                this.window = null;
+            }
+
+            componentDidUpdate() {
+                if(this.window) {
+                    const { render } = this.window;
+                    const { children } = this.props;
+                    isFunction(children)
+                        ? render(children(this.window))
+                        : render(children);
+                }
+            }
+
+            internalForceUpdate = () => this.forceUpdate();
+
+            close = () => {
+                this.window.close();
+                this.props.onClose();
+            }
+        
+            render() {
+                return null;
+            }
+        }
+    
+        class App extends React.Component {
+            state = {
+                openWindow: false,
+                message: '',
+                counts: [0,0,0],
+            }
+        
+            openNewWindow = () => {
+                this.setState({
+                    openWindow: true,
+                    message: 'You created a child! Parenthood is the greatest...',
+                });
+            }
+
+            increment = () => {
+                const idx = Math.floor(Math.random() * this.state.counts.length)
+                const nextCounts= this.state.counts.slice();
+                nextCounts[idx] += 1;
+                this.setState({counts: nextCounts});
+            }
+            
+            onChildWindowClose = () => {
+                this.setState({
+                    openWindow: false,
+                    message: 'Child closed!'
+                });
+            }
+
+            render() {
+                return (
+                    <div>
+                    <div>Count: {this.state.counts.join(', ')}</div>
+                    <button onClick={this.openNewWindow}>Open!</button>
+                    <button onClick={this.increment}>Increment!</button>
+                    <div>{this.state.message}</div>
+                    {this.state.openWindow && 
+                        <Window 
+                            url='blank.html'
+                            onClose={this.onChildWindowClose}
+                            width={640}
+                            height={480}
+                            menubar
+                            toolbar
+                        >
+                        {(window) => (
+                            <div>
+                                <div>Cool stuff</div>
+                                <div>More cool stuff</div>
+                                <div>Count: {this.state.counts.join(', ')}</div>
+                                <button onClick={window.close}>Close!</button>
+                                <button onClick={this.increment}>Increment!</button>
+                            </div>
+                        )}
+                        </Window>
+                    }
+                    </div>
+                );
+            } 
+        }
+    
+        ReactDOM.render(<App />, document.querySelector('#app'));
+    </script>
+</body>
+</html>

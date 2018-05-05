@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <button id='windowMaker'>Make Child!</button>
+    <script>
+    (() => {
+        const isFunction = x => typeof x === 'function';
+        const isObject = x => x !== null && typeof x === 'object';
+
+        const dfsObj = (obj, fn) => {
+            for(let prop in obj) {
+                if(isFunction(obj[prop])) fn(obj);
+                if(isObject(obj)) dfsObj(obj, fn);
+            }
+        };
+
+        const store = {
+            init: (reducer) => {
+                this.state = { count: 0};
+                this.subscribers = new Set();
+                this.reducer = reducer;
+            },
+            dispatch: (action) => {
+                console.log(action);
+                this.state.count += 1;
+                this.subscribers.forEach(sub => sub.forceUpdate(this.state.count));
+                // dfsObj(this.reducer, slice => slice(this.state, action));
+            },
+            subscribe: (subscriber) => {
+                this.subscribers.add(subscriber);
+            }
+        }
+
+        store.init();
+
+        const onBtnClick = () => {
+            const features = Object.entries({
+                menubar: 0,
+                location: 0,
+                toolbar: 0,
+                width: 640,
+                height: 480,
+                resizeble: 1,
+            })
+                .map(([key, value]) => `${key}=${value}`)
+                .join();
+            const childWindow = window.open('childWindow.html', Date.now(), features);
+            store.subscribe(childWindow);
+            childWindow.addEventListener('message', (e) => store.dispatch(e));
+        }
+
+        document.querySelector('#windowMaker')
+            .addEventListener('click', onBtnClick);
+    })()
+    </script>
+</body>
+</html>

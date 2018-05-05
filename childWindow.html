@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <button id='dispatcher'>Dispatch Event</button>
+    <p id='click_count'>0</p>
+    <script>
+    const count = document.querySelector('#click_count');
+    const render = state => {
+        count.textContent = state;
+    };
+
+    (() => {
+        window.forceUpdate = state => {
+            render(state);
+        };
+
+        document.querySelector('#dispatcher')
+            .addEventListener('click', () => {
+                window.dispatchEvent(new Event('message'))
+            });
+    })();
+    </script>
+</body>
+</html>
