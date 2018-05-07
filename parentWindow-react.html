@@ -13,71 +13,53 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/16.2.0/umd/react-dom.development.js"></script>
 
     <script type="text/babel">
-        const isFunction = x => typeof x === 'function';
-
         class Window extends React.Component {
             window = null;
-        
+
+            getFeatures = () => {
+                return Object.entries({
+                    menubar: this.props.menubar,
+                    location: this.props.location,
+                    toolbar: this.props.toolbar,
+                    width: this.props.width,
+                    height: this.props.height,
+                    resizeble: this.props.resizeble,
+                }).map(([key, value]) => `${key}=${value}`).join();
+            }
+
             componentDidMount() {
                 if(this.window) return this.window.open();
 
-                const {
-                    url,
-                    name,
-                    menubar,
-                    location,
-                    toolbar,
-                    width,
-                    height,
-                    resizeble,
-                } = this.props;
-
-                const features = Object.entries({
-                    menubar,
-                    location,
-                    toolbar,
-                    width,
-                    height,
-                    resizeble,
-                }).map(([key, value]) => `${key}=${value}`).join();
-
-                const w = window.open(url, name, features);
-                const childWindowAppRoot = w.document.createElement('div');
-                w.render = (children) => {
-                    // if you are simply creating a new view
-                    // with light functionality, then you can
-                    // pass the children down and the child window
-                    // can be a mini react app that can render
-                    // itself and maintain it's own state
-                    ReactDOM.render(children, childWindowAppRoot);
-                }
-                w.addEventListener('load', () => {
-                    w.document.body.appendChild(childWindowAppRoot);
-                    this.internalForceUpdate(); 
-                }, { once: true });
+                const { url, name } = this.props;
+                const w = window.open(url, name, this.getFeatures());
+                const childRoot = w.document.createElement('div');
+                w.addEventListener('load', this.load(w, childRoot), { once: true });
                 w.addEventListener('beforeunload', this.close, { once: true });
+                w.render = (children) => {
+                    ReactDOM.render(children, childRoot);
+                }
                 this.window = w;
             }
             
+            componentDidUpdate() {
+                if(this.window) {
+                    this.window.render(this.props.children(this.window))
+                }
+            }
+
             componentWillUnmount() {
                 this.window = null;
             }
 
-            componentDidUpdate() {
-                if(this.window) {
-                    const { render } = this.window;
-                    const { children } = this.props;
-                    isFunction(children)
-                        ? render(children(this.window))
-                        : render(children);
-                }
+            load = (window, root) => () => {
+                window.document.body.appendChild(root);
+                this.forceUpdate();
+                if(this.props.onLoad) this.props.onLoad();
             }
-
-            internalForceUpdate = () => this.forceUpdate();
 
             close = () => {
                 this.window.close();
-                this.props.onClose();
+                if(this.props.onClose) this.props.onClose();
             }
         
             render() {
@@ -123,6 +105,7 @@
                     {this.state.openWindow && 
                         <Window 
                             url='blank.html'
+                            name='child'
                             onClose={this.onChildWindowClose}
                             width={640}
                             height={480}
@@ -134,7 +117,7 @@
                                 <div>Cool stuff</div>
                                 <div>More cool stuff</div>
                                 <div>Count: {this.state.counts.join(', ')}</div>
-                                <button onClick={window.close}>Close!</button>
+                                <button onClick={() => window.close()}>Close!</button>
                                 <button onClick={this.increment}>Increment!</button>
                             </div>
                         )}
