@@ -72,6 +72,7 @@
                 openWindow: false,
                 message: '',
                 counts: [0,0,0],
+                query: ''
             }
         
             openNewWindow = () => {
@@ -87,6 +88,13 @@
                 nextCounts[idx] += 1;
                 this.setState({counts: nextCounts});
             }
+
+            onInputChange = (e) => {
+                const query = e.target.value;
+                this.setState({
+                    query
+                })
+            }
             
             onChildWindowClose = () => {
                 this.setState({
@@ -98,31 +106,31 @@
             render() {
                 return (
                     <div>
-                    <div>Count: {this.state.counts.join(', ')}</div>
-                    <button onClick={this.openNewWindow}>Open!</button>
-                    <button onClick={this.increment}>Increment!</button>
-                    <div>{this.state.message}</div>
-                    {this.state.openWindow && 
-                        <Window 
-                            url='blank.html'
-                            name='child'
-                            onClose={this.onChildWindowClose}
-                            width={640}
-                            height={480}
-                            menubar
-                            toolbar
-                        >
-                        {(window) => (
-                            <div>
-                                <div>Cool stuff</div>
-                                <div>More cool stuff</div>
-                                <div>Count: {this.state.counts.join(', ')}</div>
-                                <button onClick={() => window.close()}>Close!</button>
-                                <button onClick={this.increment}>Increment!</button>
-                            </div>
-                        )}
-                        </Window>
-                    }
+                        <input onChange={this.onInputChange} value={this.state.query} />
+                        <div>Count: {this.state.counts.join(', ')}</div>
+                        <button onClick={this.openNewWindow}>Open!</button>
+                        <button onClick={this.increment}>Increment!</button>
+                        <div>{this.state.message}</div>
+                        {this.state.openWindow && 
+                            <Window 
+                                url='blank.html'
+                                name='child'
+                                onClose={this.onChildWindowClose}
+                                width={640}
+                                height={480}
+                                menubar
+                                toolbar
+                            >
+                            {(window) => (
+                                <div>
+                                    <input onChange={this.onInputChange} value={this.state.query} />
+                                    <div>Count: {this.state.counts.join(', ')}</div>
+                                    <button onClick={() => window.close()}>Close!</button>
+                                    <button onClick={this.increment}>Increment!</button>
+                                </div>
+                            )}
+                            </Window>
+                        }
                     </div>
                 );
             } 
