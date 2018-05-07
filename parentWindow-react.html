@@ -18,6 +18,8 @@
 
             getFeatures = () => {
                 return Object.entries({
+                    top: this.props.y,
+                    left: this.props.x,
                     menubar: this.props.menubar,
                     location: this.props.location,
                     toolbar: this.props.toolbar,
@@ -118,6 +120,8 @@
                                 onClose={this.onChildWindowClose}
                                 width={640}
                                 height={480}
+                                x={60}
+                                y={90}
                                 menubar
                                 toolbar
                             >
