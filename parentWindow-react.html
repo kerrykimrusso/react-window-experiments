@@ -16,17 +16,25 @@
         class Window extends React.Component {
             window = null;
 
-            getFeatures = () => {
-                return Object.entries({
+            getFeatures = () => Object.entries({
                     top: this.props.y,
                     left: this.props.x,
-                    menubar: this.props.menubar,
-                    location: this.props.location,
-                    toolbar: this.props.toolbar,
                     width: this.props.width,
                     height: this.props.height,
-                    resizeble: this.props.resizeble,
+                    menubar: this.props.menubar || '0',
+                    toolbar: this.props.toolbar || '0',
+                    titlebar: this.props.titlebar || '0',
                 }).map(([key, value]) => `${key}=${value}`).join();
+
+            load = (window, root) => () => {
+                // @TODO: load css and js
+                window.document.body.appendChild(root);
+                this.forceUpdate();
+                if(this.props.onLoad) this.props.onLoad();
+            }
+
+            unload = () => {
+                if(this.props.onClose) this.props.onClose();
             }
 
             componentDidMount() {
@@ -34,12 +42,18 @@
 
                 const { url, name } = this.props;
                 const w = window.open(url, name, this.getFeatures());
-                const childRoot = w.document.createElement('div');
-                w.addEventListener('load', this.load(w, childRoot), { once: true });
-                w.addEventListener('beforeunload', this.close, { once: true });
-                w.render = (children) => {
-                    ReactDOM.render(children, childRoot);
+
+                if(!w) {
+                    if(this.props.onBlocked) this.props.onBlocked();
+                    return;
                 }
+
+                const root = w.document.createElement('div');
+                w.addEventListener('load', this.load(w, root), { once: true });
+                w.addEventListener('beforeunload', this.unload, { once: true });
+                w.render = function renderChild(children) { 
+                    ReactDOM.render(children, root); 
+                };
                 this.window = w;
             }
             
@@ -51,17 +65,6 @@
 
             componentWillUnmount() {
                 this.window = null;
-            }
-
-            load = (window, root) => () => {
-                window.document.body.appendChild(root);
-                this.forceUpdate();
-                if(this.props.onLoad) this.props.onLoad();
-            }
-
-            close = () => {
-                this.window.close();
-                if(this.props.onClose) this.props.onClose();
             }
         
             render() {
@@ -97,6 +100,13 @@
                     query
                 })
             }
+
+            onChildWindowBlocked = () => {
+                this.setState({
+                    openWindow: false,
+                    message: 'Couldn\'t open the window cause of a popup blocker most likely!'
+                });
+            }
             
             onChildWindowClose = () => {
                 this.setState({
@@ -118,12 +128,11 @@
                                 url='blank.html'
                                 name='child'
                                 onClose={this.onChildWindowClose}
+                                onBlocked={this.onChildWindowBlocked}
                                 width={640}
                                 height={480}
                                 x={60}
                                 y={90}
-                                menubar
-                                toolbar
                             >
                             {(window) => (
                                 <div>
