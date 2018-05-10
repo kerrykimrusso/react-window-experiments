@@ -15,32 +15,34 @@
     <script type="text/babel">
         class Window extends React.Component {
             window = null;
+            
+            static defaultProps = {
+                menubar: '0',
+                toolbar: '0',
+                titlebar: '0',
+                scrollbars: '1',
+                status: '0',
+            }
 
             getFeatures = () => Object.entries({
                     top: this.props.y,
                     left: this.props.x,
                     width: this.props.width,
                     height: this.props.height,
-                    menubar: this.props.menubar || '0',
-                    toolbar: this.props.toolbar || '0',
-                    titlebar: this.props.titlebar || '0',
+                    menubar: this.props.menubar,
+                    toolbar: this.props.toolbar,
+                    titlebar: this.props.titlebar,
                 }).map(([key, value]) => `${key}=${value}`).join();
 
-            load = (window, root) => () => {
-                // @TODO: load css and js
-                window.document.body.appendChild(root);
-                this.forceUpdate();
-                if(this.props.onLoad) this.props.onLoad();
+            setTitle = (doc, title) => {
+                const titleNode = doc.createElement('title');
+                const titleText = doc.createTextNode(title);
+                titleNode.appendChild(titleText);
+                doc.head.appendChild(titleNode);
             }
-
-            unload = () => {
-                if(this.props.onClose) this.props.onClose();
-            }
-
-            componentDidMount() {
-                if(this.window) return this.window.open();
-
-                const { url, name } = this.props;
+            
+            open = () => {
+                const { url, name, title } = this.props;
                 const w = window.open(url, name, this.getFeatures());
 
                 if(!w) {
@@ -49,12 +51,35 @@
                 }
 
                 const root = w.document.createElement('div');
-                w.addEventListener('load', this.load(w, root), { once: true });
-                w.addEventListener('beforeunload', this.unload, { once: true });
                 w.render = function renderChild(children) { 
                     ReactDOM.render(children, root); 
                 };
+
+                this.setTitle(w.document, title);
+                w.addEventListener('DOMContentLoaded', this.load(w, root));
+                w.dispatchEvent(new Event('DOMContentLoaded'));
                 this.window = w;
+            }
+
+            close = () => {
+                if(this.window && !this.window.closed) {
+                    this.window.close(); 
+                }
+            }
+
+            load = (window, root) => () => {
+                window.addEventListener('unload', this.unload, { once: true });
+                window.document.body.appendChild(root);
+                this.forceUpdate();
+                if(this.props.onLoad) this.props.onLoad(window);
+            }
+
+            unload = () => {
+                if(this.props.onClose) this.props.onClose();
+            }
+
+            componentDidMount() {
+                this.open();
             }
             
             componentDidUpdate() {
@@ -125,7 +150,8 @@
                         <div>{this.state.message}</div>
                         {this.state.openWindow && 
                             <Window 
-                                url='blank.html'
+                                url=''
+                                title='My Window'
                                 name='child'
                                 onClose={this.onChildWindowClose}
                                 onBlocked={this.onChildWindowBlocked}
